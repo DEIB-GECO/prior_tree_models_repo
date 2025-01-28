@@ -8,41 +8,25 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import make_scorer
 from sklearn.utils import shuffle
 from sklearn.metrics import recall_score, precision_score
-from sklearn.tree import DecisionTreeClassifier
+from pktree import tree
 import random
 import json
 import sys
-dire = '/home/tacca/GIS-weigthed_LASSO/GIS-weigthed_LASSO'
 
-sys.path.append(os.path.join(dire, "src"))
+dire_repo='/home/mongardi/tree-based-models/prior_tree_models_repo'
+sys.path.append(os.path.join(dire_repo, "src"))
+from utils.utils import load_txt, fisher_scores
 
-from utils.fisher_score import fisher_score
-from get_wgis_scores import *
+penalties = np.loadtxt(os.path.join(dire_repo,'data/penalties_kidney.txt'))
+genes_set = load_txt(os.path.join(dire_repo,'data/data_kidney/controlled_features.txt'))
 
-def load_txt(filename):
-    content = []
-    with open(filename)as f:
-        for line in f:
-            content.append(line.strip())
-    return content
-
-
-def save_dict(dictionary,filename):
-    with open("/home/mongardi/tree-based-models/Biology-informed_sklearn/src/sensitivity_analysis/src/sens_an_II2/" + filename + ".txt", "w") as fp:
-        json.dump(dictionary, fp)
-        print("Done writing dict into .txt file")
-
-penalties = np.loadtxt("/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/penalties_kidney.txt")
-genes_set = load_txt("/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/data_kidney/controlled_features.txt")
-
-dire_kidney = '/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/data_kidney/Kidney_df_tr_coding_new.csv'
+dire_kidney = os.path.join(dire_repo,'data/data_kidney/Kidney_df_tr_coding_new.csv')
 
 df = pd.read_csv(dire_kidney)
 df = shuffle(df, random_state=42)
 df.set_index(df.columns[0], inplace=True)
 
 X = df.drop(['is_healthy'], axis=1)
-print(len(X.columns))
 y = df['is_healthy']
 
 X_numeric = X.select_dtypes(include='number')
@@ -61,12 +45,10 @@ X_train, X_test,  y_train, y_test = train_test_split(rpm_log, y, random_state = 
                                         test_size = 0.2, stratify=y)
 
 fi_scores = fisher_scores(X_train, y_train.to_numpy())
-
 X_train, X_test,  y_train, y_test = train_test_split(rpm_log_new, y, random_state = 42,
                                         test_size = 0.2, stratify=y)
 
 genes = list(fi_scores.iloc[0][most_relevant_genes].sort_values().index)
-print(genes)
 dict_genes = {g:i for i,g in enumerate(X_train.columns)}
 genes_idx = [dict_genes[g] for g in genes]  
 print('Normalizing')
@@ -84,15 +66,9 @@ for i in range(1000):
     print('---------------run #',i,'-----------------')
     print('--------------- Standard Decision Tree -----------------')
 
-    classifier =  tree.DecisionTreeClassifier(random_state=i, criterion="gini",  w_prior=np.array(penalties), pk_configuration='no_gis')
+    classifier =  tree.DecisionTreeClassifier(random_state=i, criterion="gini",  w_prior=np.array(penalties), pk_configuration='standard', pk_function=None)
     classifier.fit(X_train, y_train)
-    print("original splitting features: ", classifier.tree_.feature[classifier.tree_.feature != -2])
-    
-    classifier = tree.DecisionTreeClassifier(random_state=i, criterion="gini", w_prior=np.array(penalties), pk_configuration="on_impurity_improvement", v=1, k=1)
-    classifier.fit(X_train, y_train)
-    print("original splitting features: ", classifier.tree_.feature[classifier.tree_.feature != -2])
-
-
+   
     split_features = rpm_log_new.columns[classifier.tree_.feature[classifier.tree_.feature != -2]]
     print(classifier.tree_.feature)
     print("original splitting features: ",split_features.tolist())
@@ -111,7 +87,7 @@ for i in range(1000):
         penalties_n1[f] = penalties[f]
         #print(penalties_n1)
 
-        classifier = tree.DecisionTreeClassifier(random_state=i, criterion="gini", w_prior=np.array(penalties), pk_configuration="on_impurity_improvement", v=1, k=1)
+        classifier = tree.DecisionTreeClassifier(random_state=i, criterion="gini", w_prior=np.array(penalties_n1), pk_configuration="on_impurity_improvement", v=1, k=1, pk_function=None)
         classifier.fit(X_train, y_train)
 
         split_features = rpm_log_new.columns[classifier.tree_.feature[classifier.tree_.feature != -2]]
@@ -127,7 +103,7 @@ for i in range(1000):
             penalties_new  = penalties_n1.copy()
             penalties_new[f] = value
 
-            classifier = tree.DecisionTreeClassifier(random_state=i, criterion="gini", w_prior=np.array(penalties_new), pk_configuration="on_impurity_improvement", v=1, k=1)
+            classifier = tree.DecisionTreeClassifier(random_state=i, criterion="gini", w_prior=np.array(penalties_new), pk_configuration="on_impurity_improvement", v=1, k=1, pk_function=None)
             classifier.fit(X_train, y_train)
         
             split_features = rpm_log_new.columns[classifier.tree_.feature[classifier.tree_.feature != -2]]
@@ -138,5 +114,3 @@ for i in range(1000):
     
    
     print({x:np.sum(dct_features[x]) for x in dct_features})
-    # save_dict(dct_features,'rounds_mrf_new_ds'+ str(i))
-    # save_dict(dct_n_features,'rounds_n_mrf_new_ds'+ str(i))

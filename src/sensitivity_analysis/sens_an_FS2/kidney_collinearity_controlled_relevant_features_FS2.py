@@ -12,39 +12,21 @@ from pktree import tree
 import random
 import json
 import sys
-dire = '/home/tacca/GIS-weigthed_LASSO/GIS-weigthed_LASSO'
 
-sys.path.append(os.path.join(dire, "src"))
+dire_repo='/home/mongardi/tree-based-models/prior_tree_models_repo'
+sys.path.append(os.path.join(dire_repo, "src"))
+from utils.utils import load_txt, fisher_scores
 
-from utils.fisher_score import fisher_score
-from get_wgis_scores import *
+penalties = np.loadtxt(os.path.join(dire_repo,'data/penalties_kidney.txt'))
+genes_set = load_txt(os.path.join(dire_repo,'data/data_kidney/controlled_features.txt'))
 
-
-def load_txt(filename):
-    content = []
-    with open(filename)as f:
-        for line in f:
-            content.append(line.strip())
-    return content
-
-
-def save_dict(dictionary,filename):
-    with open("/home/mongardi/tree-based-models/Biology-informed_sklearn/src/sensitivity_analysis/src/sens_an_FS2/" + filename + ".txt", "w") as fp:
-        json.dump(dictionary, fp)
-        print("Done writing dict into .txt file")
-
-penalties = np.loadtxt("/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/penalties_kidney.txt")
-genes_set = load_txt("/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/data_kidney/controlled_features.txt")
-
-dire_kidney = '/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/data_kidney/Kidney_df_tr_coding_new.csv'
-#dire_kidney = '/home/tacca/GIS-weigthed_LASSO/GIS-weigthed_LASSO/data/data_kidney/Kidney_df_tr_coding_new.csv'
+dire_kidney = os.path.join(dire_repo,'data/data_kidney/Kidney_df_tr_coding_new.csv')
 
 df = pd.read_csv(dire_kidney)
 df = shuffle(df, random_state=42)
 df.set_index(df.columns[0], inplace=True)
 
 X = df.drop(['is_healthy'], axis=1)
-print(len(X.columns))
 y = df['is_healthy']
 
 X_numeric = X.select_dtypes(include='number')
@@ -79,19 +61,14 @@ X_test = norm.transform(X_test)
 all_genes = rpm_log_new.columns.tolist()
 
 max_features = [1000]
-max_leaf_nodes = None#100
-#penalties = get_GIS_scores_lasso_func([], rpm_log_new.columns, k=1, v=1,  go=True, reactome=True, hpo=True, notebook=True, dire_1=dire_1, dire_2=dire_2)
-
-# with open("/home/tacca/tesi/test_embeddings/penalties_kidney_new_ds.txt", "w") as f:
-#     for i in penalties:
-#         f.write(f"{i}\n")
+max_leaf_nodes = None
 
 for i in range(1000):
     
     print('---------------', i,'-----------------')
     print('--------------- Standard Decision Tree -----------------')
 
-    classifier =  tree.DecisionTreeClassifier(random_state=i, criterion="gini",  w_prior=np.array(penalties), pk_configuration='no_gis')
+    classifier =  tree.DecisionTreeClassifier(random_state=i, criterion="gini",  w_prior=np.array(penalties),  pk_configuration='standard', pk_function=None)
     classifier.fit(X_train, y_train)
     
     split_features = rpm_log_new.columns[classifier.tree_.feature[classifier.tree_.feature != -2]]
@@ -111,7 +88,7 @@ for i in range(1000):
         penalties_n1 = np.ones(len(penalties)) #penalties.copy()
         penalties_n1[f] = penalties[f]
         #print(penalties_n1)
-        classifier = tree.DecisionTreeClassifier(random_state=i, criterion="gini", w_prior=np.array(penalties), pk_configuration="on_feature_sampling", v=1, k=1)
+        classifier = tree.DecisionTreeClassifier(random_state=i, criterion="gini", w_prior=np.array(penalties_n1), pk_configuration="on_feature_sampling", v=1, k=1, pk_function=None)
         classifier.fit(X_train, y_train)
 
         split_features = rpm_log_new.columns[classifier.tree_.feature[classifier.tree_.feature != -2]]
@@ -126,7 +103,8 @@ for i in range(1000):
 
             penalties_new  = penalties_n1.copy()
             penalties_new[f] = value
-            classifier = tree.DecisionTreeClassifier(random_state=i, criterion="gini", w_prior=np.array(penalties_new), pk_configuration="on_feature_sampling", v=1, k=1)
+            print(penalties_new[f])
+            classifier = tree.DecisionTreeClassifier(random_state=i, criterion="gini", w_prior=np.array(penalties_new), pk_configuration="on_feature_sampling", v=1, k=1, pk_function=None)
 
             classifier.fit(X_train, y_train)
         
@@ -138,5 +116,3 @@ for i in range(1000):
     
    
     print({x:np.sum(dct_features[x]) for x in dct_features})
-    #save_dict(dct_features,'rounds_mrf_new_ds'+ str(i))
-    #save_dict(dct_n_features,'rounds_n_mrf_new_ds'+ str(i))

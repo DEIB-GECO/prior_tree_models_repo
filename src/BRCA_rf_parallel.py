@@ -9,18 +9,22 @@ import pandas as pd
 import json
 from joblib import Parallel, delayed
 from joblib import Memory
-from utils import load_data_brca, load_penalties, load_DT_classifier, scoring
+from utils.utils import load_data_brca, load_penalties, load_DT_classifier, scoring
 # parallel implementation
 from joblib import Parallel, delayed
 from joblib import Memory
 
 
+
 # load dataset
-file_path = "/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/data_BRCA/BRCA_dataset.csv"
+dire_repo = '/home/mongardi/tree-based-models/prior_tree_models_repo'
+file_path = os.path.join(dire_repo,"data/data_BRCA/BRCA_dataset.csv")
+dire_results = os.path.join(dire_repo,'results/BRCA/features_rf')
+dire_results_2 = os.path.join(dire_repo,'results/BRCA/results_rf')
 X_train, y_train,  X_test, y_test, gene_names= load_data_brca(file_path, test_size = 0.2, return_columns=True, random_state=42)
 
 # load penalties
-penalties_file = "/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/penalties.txt"
+penalties_file =  os.path.join(dire_repo,"data/penalties.txt")
 gis_score = load_penalties(penalties_file)
 
 print(X_train.shape)
@@ -33,7 +37,7 @@ label_encoder = LabelEncoder()
 y_train = label_encoder.fit_transform(y_train)
 y_test = label_encoder.fit_transform(y_test)
 
-"
+
 which_gis = "on_impurity_improvement"
 oob_score = True
 on_oob = True
@@ -60,7 +64,7 @@ def run_exp_mfv(mfv):
         v = 0.35 
         r=1.0
 
-    elif which_gis == "on_feature_selection":
+    elif which_gis == "on_feature_sampling":
         k = 2.0
         v = 1.0
         r=1.0
@@ -81,7 +85,7 @@ def run_exp_mfv(mfv):
     print('params:', k, v, r, max_samples)
     print("max_features = ", mfv)
     for i in range(10):
-        classifier = ensemble.RandomForestClassifier(n_estimators=100, random_state=i, criterion="gini", w_prior=gis_score, pk_configuration=which_gis, max_features = mfv, k=k, v=v, r=r, oob_score = oob_score, on_oob = on_oob, max_samples=max_samples)
+        classifier = ensemble.RandomForestClassifier(n_estimators=100, random_state=i, criterion="gini", w_prior=gis_score, pk_configuration=which_gis, max_features = mfv, k=k, v=v, r=r, oob_score = oob_score, on_oob = on_oob, max_samples=max_samples, pk_function=None)
         classifier.fit(X_train, y_train)
         predictions = classifier.predict(X_test)
         accuracy.append(accuracy_score(y_test, predictions))
@@ -91,11 +95,11 @@ def run_exp_mfv(mfv):
 
         for k, tree in enumerate(classifier.estimators_):
             used_genes = set([gene_names[j] for j in tree.tree_.feature if j != -2])
-            with open(f"/home/mongardi/tree-based-models/Biology-informed_sklearn/results/BRCA/features_rf/{which_gis}_rf_{mfv}_{on_oob}_{i}.json", 'a') as f:
+            with open(os.path.join(dire_results, f"{which_gis}_rf_{mfv}_{on_oob}_{i}.json"), 'a') as f:
                 json.dump(list(used_genes), f)
                 f.write('\n')
             df_feat_importances = pd.DataFrame(classifier.feature_importances_, index=gene_names)
-            df_feat_importances.to_csv(f"/home/mongardi/tree-based-models/Biology-informed_sklearn/results/BRCA/features_rf/{which_gis}_rf_{mfv}_{on_oob}_{i}_feat_importances.csv")
+            df_feat_importances.to_csv(os.path.join(dire_results,f"{which_gis}_rf_{mfv}_{on_oob}_{i}_feat_importances.csv"))
     print("MEAN:")
     print("accuracy: ", np.mean(accuracy))
     print("f1: ", np.mean(f1))
@@ -127,5 +131,5 @@ for i,values in enumerate(work):
     df_p.loc[max_features_values[i], 'precision mean'], df_p.loc[max_features_values[i], 'precision std'] = np.round(values[2], 4), np.round(values[6], 4)
     df_p.loc[max_features_values[i], 'recall mean'], df_p.loc[max_features_values[i], 'recall std'] = np.round(values[3], 4), np.round(values[7], 4)
 
-df_p.to_csv(f"/home/mongardi/tree-based-models/Biology-informed_sklearn/results/BRCA/results_rf/{which_gis}_rf_{on_oob}.csv")
+df_p.to_csv(os.path.join(dire_results_2, f"{which_gis}_rf_{on_oob}.csv"))
 

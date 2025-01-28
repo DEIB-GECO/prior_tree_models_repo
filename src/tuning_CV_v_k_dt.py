@@ -11,20 +11,22 @@ from sklearn.metrics import recall_score, accuracy_score, precision_score, f1_sc
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from utils import load_data_brca, load_penalties, load_DT_classifier, scoring
+from utils.utils import load_data_brca, load_penalties, load_DT_classifier, scoring
 from pktree import tree
 from joblib import Parallel, delayed
 from joblib import Memory
 
-# load dataset
-file_path = "/data_tree/data_BRCA/BRCA_dataset.csv"
+dire_repo = '/home/mongardi/tree-based-models/prior_tree_models_repo'
+file_path = os.path.join(dire_repo,"data/data_BRCA/BRCA_dataset.csv")
+dire_results = os.path.join(dire_repo,'results/BRCA/features_dt/')
 X_train, y_train,  X_test, y_test = load_data_brca(file_path, test_size = 0.2, random_state=42)
 
-# load penalties
-penalties_file = "/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/penalties.txt"
+#load penalties
 gis_score = load_penalties(penalties_file)
 
-def run_cv(seed, pk_configuration='on_feature_selection', w_prior=None, 
+
+
+def run_cv(seed, pk_configuration='on_feature_sampling', w_prior=None, 
             values_k= None, values_v=None, criterion='gini'):
     
     print(f"Running iteration {seed}", flush=True)
@@ -46,7 +48,7 @@ def run_cv(seed, pk_configuration='on_feature_selection', w_prior=None,
     
 
         tree_clf = load_DT_classifier(pk_configuration= pk_configuration,  w_prior = w_prior, k=value_k,
-                    v=value_v, criterion=criterion, random_state=seed)
+                    v=value_v, criterion=criterion, random_state=seed, pk_function=None)
         
         all_scores = model_selection.cross_validate(tree_clf, X_train, y_train, cv=5, scoring=scoring)
 
@@ -120,7 +122,7 @@ if refit:
     for i in range(10):
         tree_clf = Pipeline(steps=[('Scaler', MinMaxScaler()),
                     ('Model', tree.DecisionTreeClassifier( w_prior = gis_score,
-                    pk_configuration="on_feature_selection", v=best_param_v, max_features=None,
+                    pk_configuration="on_impurity_improvment", v=best_param_v, max_features=None,
                     criterion="gini", random_state=i))])
         tree_clf.fit(X_train, y_train)
         y_pred = tree_clf.predict(X_test)
@@ -160,7 +162,7 @@ parallel = Parallel(
     n_jobs=n_jobs)
 
 work = parallel(
-    delayed(run_cv)(i, pk_configuration='on_feature_selection', w_prior=gis_score, 
+    delayed(run_cv)(i, pk_configuration='on_feature_sampling', w_prior=gis_score, 
             values_k=k, values_v=None, criterion='gini')
     for i in range(n_jobs)
 )
@@ -194,7 +196,7 @@ if refit:
     for i in range(10):
         tree_clf = Pipeline(steps=[('Scaler', MinMaxScaler()),
                     ('Model', tree.DecisionTreeClassifier( w_prior = gis_score,
-                    pk_configuration="on_feature_selection", k=best_param_k, max_features=None,
+                    pk_configuration="on_feature_sampling", k=best_param_k, max_features=None,
                     criterion="gini", random_state=i))])
         tree_clf.fit(X_train, y_train)
         y_pred = tree_clf.predict(X_test)

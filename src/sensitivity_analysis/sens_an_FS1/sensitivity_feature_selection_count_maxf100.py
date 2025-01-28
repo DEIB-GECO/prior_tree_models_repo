@@ -1,27 +1,30 @@
-import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-from pktree import tree
-from sklearn.utils import shuffle
+import pandas as pd
 import os
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import  MinMaxScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import make_scorer
+from sklearn.utils import shuffle
+from sklearn.metrics import recall_score, precision_score
+from pktree import tree
+import random
+import json
+import sys
 
+dire_repo='/home/mongardi/tree-based-models/prior_tree_models_repo'
+sys.path.append(os.path.join(dire_repo, "src"))
+from utils.utils import load_txt
 
-def load_txt(filename):
-    content = []
-    with open(filename)as f:
-        for line in f:
-            content.append(line.strip())
-    return content
+penalties = np.loadtxt(os.path.join(dire_repo,'data/penalties_kidney.txt'))
+genes_set = load_txt(os.path.join(dire_repo,'data/data_kidney/controlled_features.txt'))
 
-dire_kidney = '/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/data_kidney/Kidney_df_tr_coding_new.csv'
+dire_kidney = os.path.join(dire_repo,'data/data_kidney/Kidney_df_tr_coding_new.csv')
 
 df = pd.read_csv(dire_kidney)
 df = shuffle(df, random_state=42)
 df.set_index(df.columns[0], inplace=True)
-penalties = np.loadtxt("/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/penalties_kidney.txt")
-genes_set = load_txt("/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/data_kidney/controlled_features.txt")
-
 X = df.drop(['is_healthy'], axis=1)
 y = df['is_healthy']
 
@@ -50,5 +53,5 @@ for i in range(1,101):
     for v in r:
         penalties[0] = v
         print("------------------------------------------------GIS[0] = ",penalties[0],"-----------------------------------")
-        classifier = tree.DecisionTreeClassifier(random_state=3*i, criterion="gini", w_prior=np.array(penalties), pk_configuration="on_feature_sampling", v=1, k=1, max_features=100) 
+        classifier = tree.DecisionTreeClassifier(random_state=3*i, criterion="gini", w_prior=np.array(penalties), pk_configuration="on_feature_sampling", v=1, k=1, max_features=100, pk_function=None) 
         classifier.fit(X_train, y_train)

@@ -11,15 +11,16 @@ from sklearn.metrics import recall_score, accuracy_score, precision_score, f1_sc
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from utils import load_data_brca, load_penalties, load_DT_classifier, scoring
+from utils.utils import load_data_brca, load_penalties, load_DT_classifier, scoring
 from pktree import ensemble
 
 # load dataset
-file_path = "/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/data_BRCA/BRCA_dataset.csv"
+dire_repo = '/home/mongardi/tree-based-models/prior_tree_models_repo'
+file_path = os.path.join(dire_repo,"data/data_BRCA/BRCA_dataset.csv")
+dire_results = os.path.join(dire_repo,'results/BRCA/features_dt/')
 X_train, y_train,  X_test, y_test = load_data_brca(file_path, test_size = 0.2, random_state=42)
 
-# load penalties
-penalties_file = "/home/mongardi/tree-based-models/Biology-informed_sklearn/data_tree/penalties.txt"
+#load penalties
 gis_score = load_penalties(penalties_file)
 
 print(X_train.shape)
@@ -119,7 +120,7 @@ if refit:
         tree_clf = Pipeline(steps=[('Scaler', MinMaxScaler()),
                     ('Model', RandomForestClassifier(n_estimators=100, random_state=seed, criterion="gini",
                     w_prior=gis_score, pk_configuration=which_gis, max_features = mfv, k=k, v=v, r=best_param_v, 
-                    oob_score = oob_score, on_oob = on_oob))])
+                    oob_score = oob_score, on_oob = on_oob, pk_function=None))])
 
         tree_clf.fit(X_train, y_train)
         y_pred = tree_clf.predict(X_test)
