@@ -14,7 +14,7 @@ from utils.utils import load_data_brca, load_penalties, load_DT_classifier, scor
 # load dataset
 dire_repo = '/home/mongardi/tree-based-models/prior_tree_models_repo'
 file_path = os.path.join(dire_repo,"data/data_BRCA/BRCA_dataset.csv")
-dire_results = os.path.join(dire_repo,'results/BRCA/features_dt/')
+dire_results = os.path.join(dire_repo,'results/BRCA/features_dt')
 
 X_train, y_train,  X_test, y_test, gene_names = load_data_brca(file_path, test_size = 0.2, return_columns=True, random_state=42)
 

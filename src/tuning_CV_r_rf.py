@@ -17,7 +17,7 @@ from pktree import ensemble
 # load dataset
 dire_repo = '/home/mongardi/tree-based-models/prior_tree_models_repo'
 file_path = os.path.join(dire_repo,"data/data_BRCA/BRCA_dataset.csv")
-dire_results = os.path.join(dire_repo,'results/BRCA/features_dt/')
+
 X_train, y_train,  X_test, y_test = load_data_brca(file_path, test_size = 0.2, random_state=42)
 
 #load penalties

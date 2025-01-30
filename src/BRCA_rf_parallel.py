@@ -80,7 +80,7 @@ def run_exp_mfv(mfv):
         r=1.0
 
     if oob_score:
-        r = 10.0
+        r = 8.0
 
     print('params:', k, v, r, max_samples)
     print("max_features = ", mfv)
