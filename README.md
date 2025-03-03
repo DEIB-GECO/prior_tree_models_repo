@@ -7,6 +7,7 @@ We developed a robust framework that improves tree-based models for high-dimensi
 
 ## Application Use Case
 We compared the performance of the standard tree-based models and our proposed approaches on an application use case concerning the cancer-related subtype prediction of patients based on gene expression data. The use case concerns the classification of Breast Invasive Carcinoma (BRCA) patients in their corresponding cancer subtypes. We also performed two distinct sensitivity analyses to evaluate the impact of incorporating prior knowledge into tree-based models. We used a controlled dataset with limited correlation among the features for these analyses, considering publicly available RNA-seq profiles of Kidney Renal Clear Cell Carcinoma patients from The Cancer Genome Atlas (TCGA) project. The preprocessed dataset is available [here](https://github.com/DEIB-GECO/prior_tree_models_repo/tree/main/data), along with the list of features considered in the controlled dataset.
+For all datasets analysed, the data are preprocessed as described in the notebooks found [here](https://github.com/DEIB-GECO/prior_tree_models_repo/tree/main/notebooks).
 
 ## Implementation
 To implement such tree-based models, we developed PkTree, a Python package that implements the proposed modifications. More information on the usage of the PkTree package is available [here](https://github.com/DEIB-GECO/pktree/tree/main).
